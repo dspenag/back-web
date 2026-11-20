@@ -43,7 +43,6 @@ async function guardarImagenesPublicacion(images) {
     throw new HttpError(400, 'El tamaño total de las imágenes no debe superar 20 MB');
   }
 
-  // Devolvemos el Base64 directamente en 'url' para que se guarde en MongoDB
   return imagenes.map((imagen) => ({
     archivo: null,
     url: imagen.dataUrl,
@@ -51,12 +50,10 @@ async function guardarImagenesPublicacion(images) {
 }
 
 async function eliminarImagenesPublicacion() {
-  // No-op: las imágenes viven en MongoDB, no en el disco del servidor
+  // Las imágenes viven en MongoDB, no en disco
 }
 
 module.exports = {
   guardarImagenesPublicacion,
-  eliminarImagenesPublicacion,
-};
   eliminarImagenesPublicacion,
 };
