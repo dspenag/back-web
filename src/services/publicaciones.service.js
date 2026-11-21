@@ -5,6 +5,8 @@ const HttpError = require('../utils/HttpError');
 const { guardarImagenesPublicacion, eliminarImagenesPublicacion } = require('../utils/imagenesPublicacion');
 const { calcularDiasTranscurridos, estaCaducada } = require('../utils/caducidadPublicacion');
 
+const ESTADOS_NO_DISPONIBLES = ['Donado', 'Intercambiado'];
+
 async function listar(filtros = {}) {
   await sincronizarCaducidad();
   const query = {};
@@ -18,7 +20,7 @@ async function listar(filtros = {}) {
   if (filtros.estado && filtros.estado !== 'Todos' && filtros.estado !== 'TODOS') {
     query.status = filtros.estado;
   } else {
-    query.status = { $ne: 'Intercambiado' };
+    query.status = { $nin: ESTADOS_NO_DISPONIBLES };
   }
 
   // Filtro por modalidad (ej: 'Donación', 'Intercambio')
@@ -187,7 +189,7 @@ async function obtenerEstadisticas() {
     donacionesPublicacion,
     caducadosPublicacion,
   ] = await Promise.all([
-    Publicacion.countDocuments({ status: { $nin: ['Donado', 'Intercambiado'] } }),
+    Publicacion.countDocuments({ status: { $nin: ESTADOS_NO_DISPONIBLES } }),
     Solicitud.countDocuments({
       type: { $regex: /inter/i },
       status: { $in: ['Donado', 'Aceptado'] },
