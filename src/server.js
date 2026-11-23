@@ -2,7 +2,6 @@ require('dotenv').config();
 const app = require('./app');
 const { connectDB } = require('./config/db');
 const {
-  sembrarDatosIniciales,
   sincronizarCaducidad,
 } = require('./services/publicaciones.service');
 const { sembrarUsuarioInicial } = require('./services/auth.service');
@@ -14,8 +13,7 @@ async function iniciarServidor() {
     // 1. Conexión a la base de datos
     await connectDB();
 
-    // 2. Semillas iniciales automáticas (si las colecciones están vacías)
-    await sembrarDatosIniciales();
+    // 2. Semillas iniciales para usuarios y solicitudes
     await sembrarUsuarioInicial();
     await sincronizarCaducidad();
 

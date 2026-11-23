@@ -62,7 +62,8 @@ PORT=3000
 # =========================================================================
 # CONEXIÓN PRINCIPAL: MongoDB Atlas (Nube)
 # =========================================================================
-MONGO_URI=mongodb+srv://<USUARIO>:<PASSWORD>@cluster0.tucluster.mongodb.net/ecogolgi_db?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<USUARIO>:<PASSWORD>@cluster0.tucluster.mongodb.net/?retryWrites=true&w=majority
+MONGO_DB_NAME=ecogolgi
 
 
 ---
@@ -85,7 +86,19 @@ MONGO_URI=mongodb+srv://<USUARIO>:<PASSWORD>@cluster0.tucluster.mongodb.net/ecog
    ```
 
 > [!NOTE]
-> Al iniciar el servidor por primera vez, si la base de datos se encuentra vacía, se ejecutarán automáticamente las funciones de **sembrado inicial (`seeder`)**, insertando las 4 publicaciones demo, el usuario de prueba por defecto y las 4 solicitudes iniciales.
+> Al iniciar el servidor, se ejecutan las funciones de sembrado inicial para el usuario de prueba y las solicitudes. Las publicaciones demo ya no se crean automáticamente.
+
+Para borrar de MongoDB las publicaciones semilla que ya existan, primero revisa cuántas coinciden:
+
+```bash
+npm run limpiar:publicaciones-semilla
+```
+
+Si la vista previa coincide con las publicaciones demo (`PRN-001` a `PRN-037`), elimínalas explícitamente:
+
+```bash
+npm run limpiar:publicaciones-semilla -- --apply
+```
 
 ---
 

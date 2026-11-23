@@ -75,7 +75,9 @@ function serializarPublicacion(publicacion) {
 async function sincronizarCaducidad() {
   const publicacionesActivas = await Publicacion.find({
     status: { $in: ['Disponible', 'Reservado'] },
-  });
+  })
+    .select('_id status createdAt publishedAt daysElapsed expirationDays')
+    .lean();
   const idsCaducados = publicacionesActivas
     .filter((publicacion) => estaCaducada(publicacion))
     .map((publicacion) => publicacion._id);
@@ -159,26 +161,6 @@ async function eliminar(id, usuario) {
   return eliminada;
 }
 
-// Sembrar publicaciones de ejemplo (src/seeds/publicaciones.seed.json).
-// Inserta solo las que aún no existen (por `codigo`), así se pueden agregar
-// productos nuevos al JSON sin borrar la base ni duplicar los que ya están.
-async function sembrarDatosIniciales() {
-  try {
-    const semillas = require('../seeds/publicaciones.seed.json');
-    const existentes = await Publicacion.distinct('codigo', {
-      codigo: { $in: semillas.map((semilla) => semilla.codigo) },
-    });
-    const faltantes = semillas.filter((semilla) => !existentes.includes(semilla.codigo));
-
-    if (faltantes.length > 0) {
-      await Publicacion.insertMany(faltantes);
-      console.log(`✔ ${faltantes.length} publicaciones semilla agregadas a MongoDB.`);
-    }
-  } catch (error) {
-    console.error('Error al sembrar publicaciones:', error.message);
-  }
-}
-
 async function obtenerEstadisticas() {
   await sincronizarCaducidad();
   const [
@@ -234,7 +216,6 @@ module.exports = {
   crear,
   actualizar,
   eliminar,
-  sembrarDatosIniciales,
   obtenerEstadisticas,
   sincronizarCaducidad,
 };

@@ -28,6 +28,7 @@ async function connectDB() {
       console.error(`❌ ERROR: ${msg}`);
       if (process.env.VERCEL) throw new Error(msg);
       process.exit(1);
+      return;
     }
 
     if (uri.includes('<USUARIO>') || uri.includes('<PASSWORD>')) {
@@ -35,29 +36,38 @@ async function connectDB() {
       console.error(`⚠️ ATENCIÓN: ${msg}`);
       if (process.env.VERCEL) throw new Error(msg);
       process.exit(1);
+      return;
     }
 
     if (!cached.promise) {
-      cached.promise = mongoose.connect(uri, {
-        dbName: 'ecogolgi',
-        maxPoolSize: 5,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 30000,
-      }).then((conn) => {
-        console.log(`🌐 MongoDB Atlas conectado exitosamente: ${conn.connection.host}/${conn.connection.name}`);
-        return conn;
-      });
+      cached.promise = mongoose
+        .connect(uri, {
+          dbName: process.env.MONGO_DB_NAME || 'ecogolgi',
+          maxPoolSize: 5,
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 30000,
+        })
+        .then((conn) => {
+          cached.conn = conn;
+          console.log(`🌐 MongoDB Atlas conectado exitosamente: ${conn.connection.host}/${conn.connection.name}`);
+          return conn;
+        })
+        .finally(() => {
+          cached.promise = null;
+        });
     }
 
-    cached.conn = await cached.promise;
-    return cached.conn;
+    return await cached.promise;
   } catch (error) {
+    cached.conn = null;
     cached.promise = null;
     console.error('❌ Error al conectar con MongoDB Atlas:', error.message);
     if (error.message.includes('bad auth') || error.message.includes('Authentication failed')) {
       console.error('👉 Tip: Revisa que tu usuario y contraseña de MongoDB Atlas sean correctos.');
-    } else if (error.message.includes('queryTxt ETIMEOUT') || error.message.includes('ENOTFOUND')) {
-      console.error('👉 Tip: Revisa que hayas añadido tu dirección IP (o 0.0.0.0/0) en Network Access de MongoDB Atlas.');
+    } else if (error.message.includes('queryTxt') || error.message.includes('ENOTFOUND')) {
+      console.error('👉 Tip: Revisa la URI SRV de Atlas y la resolución DNS del entorno.');
+    } else if (error.message.includes('ETIMEDOUT') || error.message.includes('ECONNRESET')) {
+      console.error('👉 Tip: Revisa Network Access de Atlas y las restricciones de salida de red de Vercel.');
     }
     if (process.env.VERCEL) throw error;
     process.exit(1);
