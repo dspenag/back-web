@@ -1,16 +1,23 @@
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// En entornos Windows, las consultas SRV de MongoDB Atlas a veces fallan con ECONNREFUSED
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch {
-  // Ignorar si el entorno del sistema no permite reasignar servidores DNS
+// Solo en local (Windows), las consultas SRV de MongoDB Atlas a veces fallan con ECONNREFUSED
+if (!process.env.VERCEL) {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch {
+    // Ignorar si el entorno del sistema no permite reasignar servidores DNS
+  }
+}
+
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
 }
 
 async function connectDB() {
-  if (mongoose.connection && mongoose.connection.readyState >= 1) {
-    return mongoose.connection;
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
   }
 
   try {
@@ -30,12 +37,22 @@ async function connectDB() {
       process.exit(1);
     }
 
-    const conn = await mongoose.connect(uri, {
-      dbName: 'ecogolgi',
-    });
-    console.log(`🌐 MongoDB Atlas conectado exitosamente: ${conn.connection.host}/${conn.connection.name}`);
-    return conn;
+    if (!cached.promise) {
+      cached.promise = mongoose.connect(uri, {
+        dbName: 'ecogolgi',
+        maxPoolSize: 5,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 30000,
+      }).then((conn) => {
+        console.log(`🌐 MongoDB Atlas conectado exitosamente: ${conn.connection.host}/${conn.connection.name}`);
+        return conn;
+      });
+    }
+
+    cached.conn = await cached.promise;
+    return cached.conn;
   } catch (error) {
+    cached.promise = null;
     console.error('❌ Error al conectar con MongoDB Atlas:', error.message);
     if (error.message.includes('bad auth') || error.message.includes('Authentication failed')) {
       console.error('👉 Tip: Revisa que tu usuario y contraseña de MongoDB Atlas sean correctos.');
